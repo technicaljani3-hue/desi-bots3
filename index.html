@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desi Bots</title>
+<style>
+:root{--bg:#fff4e0;--ink:#2a1a12;--card:#fffdf8;--line:#e6cfa8;--me:#ffd86b;--bot:#ffffff;--acc:#c2410c}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1410;--ink:#f6e9d6;--card:#2a1d17;--line:#4a3427;--me:#a86a12;--bot:#3a2a21;--acc:#fb923c}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",Verdana,sans-serif;display:flex;flex-direction:column;max-width:720px;margin:0 auto;padding-top:env(safe-area-inset-top,0)}
+h1{font-size:1.3rem;text-align:center;margin:12px 0 4px}
+.picker{display:flex;justify-content:space-around;gap:6px;padding:8px}
+.bot{background:none;border:0;color:inherit;font:inherit;cursor:pointer;text-align:center;padding:4px;flex:1}
+.avatar{width:68px;height:68px;border-radius:50%;margin:0 auto 4px;display:grid;place-items:center;font-size:34px;border:4px solid transparent;overflow:hidden;box-shadow:0 0 0 2px var(--line)}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.bot[aria-pressed=true] .avatar{border-color:var(--acc);transform:scale(1.1)}
+.bot span{font-size:.8rem;font-weight:700}
+#tag{text-align:center;font-size:.85rem;margin:0 12px 6px;opacity:.8}
+#log{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:82%;padding:9px 13px;border-radius:16px;line-height:1.45;white-space:pre-wrap;border:1px solid var(--line)}
+.me{align-self:flex-end;background:var(--me)}
+.ai{align-self:flex-start;background:var(--bot)}
+.ai small{display:block;font-weight:700;color:var(--acc);margin-bottom:2px}
+.bar{display:flex;gap:8px;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0));background:var(--card);border-top:1px solid var(--line)}
+input{flex:1;padding:12px;border-radius:22px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
+button.send{border:0;border-radius:22px;background:var(--acc);color:#fff;padding:0 18px;font:inherit;font-weight:700;cursor:pointer}
+.tools{display:flex;justify-content:center;gap:12px;font-size:.8rem;padding-bottom:4px}
+.tools label{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<h1>Desi Bots</h1>
+<div class="picker" id="picker" role="group" aria-label="Bot chunain"></div>
+<p id="tag"></p>
+<div class="tools"><label><input type="checkbox" id="voice" checked style="flex:none"> Bolne wali awaaz</label></div>
+<div id="log" aria-live="polite"></div>
+<div class="bar">
+  <input id="txt" placeholder="Kuch likho..." autocomplete="off">
+  <button class="send" id="go">Bhejo</button>
+</div>
+<script>
+// img: apni gol tasveer lagani ho to file (e.g. "saas.jpg") folder mein rakh kar yahan naam likh dein
+const BOTS={
+  saas:{name:"Saas",emoji:"👵",img:"",tag:"Mashwra chahiye? Bahu/damaad ban kar poochho.",hi:"Aa gayi? Pehle ye batao, ghar ka kaam khatam kiya ya sirf phone chala rahi ho?"},
+  phupho:{name:"Phupho",emoji:"👩‍🦳",img:"",tag:"Aap unke bhateeje/bhateeji hain.",hi:"Aye haye mera bacha! Itne din baad yaad aayi phupho ki? Shaadi ki koi baat chali ya nahi?"},
+  teacher:{name:"Teacher",emoji:"👨‍🏫",img:"",tag:"Sawal poocho, lecture free milega.",hi:"Baithiye. Sawal poochne se pehle ye jaan lein ke main is fan ka sab se bara ustaad hoon."},
+  dost:{name:"Dost",emoji:"😜",img:"",tag:"Bekaar yaar, roast ke liye tayyar.",hi:"Oye! Zinda hai abhi tak? Bol kya musibat aayi hai?"}
+};
+let cur="saas";const hist={saas:[],phupho:[],teacher:[],dost:[]};
+const $=id=>document.getElementById(id),log=$("log");
+
+function avatar(b){return b.img?`<img src="${b.img}" alt="">`:b.emoji}
+const picker=$("picker");
+Object.entries(BOTS).forEach(([k,b])=>{
+  const el=document.createElement("button");el.className="bot";el.dataset.k=k;
+  el.innerHTML=`<div class="avatar">${avatar(b)}</div><span>${b.name}</span>`;
+  el.onclick=()=>select(k);picker.appendChild(el);
+});
+function select(k){
+  cur=k;speechSynthesis.cancel();
+  document.querySelectorAll(".bot").forEach(e=>e.setAttribute("aria-pressed",e.dataset.k===k));
+  $("tag").textContent=BOTS[k].tag;render();
+  if(!hist[k].length){hist[k].push({role:"bot",text:BOTS[k].hi});render()}
+}
+function render(){
+  log.innerHTML="";
+  hist[cur].forEach(m=>{
+    const d=document.createElement("div");d.className="msg "+(m.role==="user"?"me":"ai");
+    if(m.role!=="user"){const s=document.createElement("small");s.textContent=BOTS[cur].name;d.appendChild(s)}
+    d.appendChild(document.createTextNode(m.text));log.appendChild(d);
+  });
+  log.scrollTop=log.scrollHeight;
+}
+function speak(t){
+  if(!$("voice").checked||!("speechSynthesis" in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);
+  const vs=speechSynthesis.getVoices();
+  const v=vs.find(v=>/^ur/i.test(v.lang))||vs.find(v=>/^hi/i.test(v.lang));
+  if(v){u.voice=v;u.lang=v.lang}else u.lang="hi-IN";
+  u.rate=({saas:0.95,phupho:1,teacher:0.9,dost:1.1})[cur];
+  u.pitch=({saas:0.8,phupho:1.2,teacher:0.7,dost:1.3})[cur];
+  speechSynthesis.speak(u);
+}
+async function send(){
+  const t=$("txt").value.trim();if(!t)return;
+  const bot=cur;$("txt").value="";
+  hist[bot].push({role:"user",text:t});render();
+  hist[bot].push({role:"bot",text:"..."});render();
+  let reply;
+  try{
+    const msgs=hist[bot].slice(0,-1).map(m=>({role:m.role,text:m.text}));
+    const r=await fetch("/.netlify/functions/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bot,messages:msgs})});
+    reply=(await r.json()).reply;
+  }catch(e){reply="Network ka masla hai, dobara koshish karo."}
+  hist[bot][hist[bot].length-1].text=reply;
+  if(bot===cur){render();speak(reply)}
+}
+$("go").onclick=send;$("txt").addEventListener("keydown",e=>{if(e.key==="Enter")send()});
+speechSynthesis.onvoiceschanged=()=>{};
+select("saas");
+</script>
+</body>
+</html>
